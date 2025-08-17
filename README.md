@@ -1,5 +1,11 @@
 # Brick Breaker Phaser Game
 
+## Play Online (GitHub Pages)
+
+You can play the game directly in your browser by visiting the following link:
+
+[https://hariburle.github.io/brickbreaker/](https://hariburle.github.io/brickbreaker/)
+
 ## How to Run
 
 1. Open a terminal in this folder.
