@@ -189,7 +189,7 @@ class GameScene extends Phaser.Scene {
       const muted = !(localStorage.getItem('bb_soundMuted') === 'true');
       localStorage.setItem('bb_soundMuted', String(muted));
       if (this.sound && typeof this.sound.setMute === 'function') this.sound.setMute(muted);
-  if (this.soundBtnFooter) { this.soundBtnFooter.setText(muted ? '🔇' : '🔊'); if (this._redrawFooterSoundBtnBg) this._redrawFooterSoundBtnBg(); }
+  if (this.soundBtnFooter) { this.soundBtnFooter.setText(muted ? '🔇' : '🔊'); }
     });
     this.input.keyboard.on('keydown-PLUS', () => {
       this.ballSpeed = Phaser.Math.Clamp(this.ballSpeed + 50, 200, 500);
@@ -257,7 +257,6 @@ class GameScene extends Phaser.Scene {
     const rightMargin = 12;
     this.soundBtnFooter.setFontSize(fontPx);
     this.soundBtnFooter.setPosition(width - rightMargin, footerCenterY);
-    if (this._redrawFooterSoundBtnBg) this._redrawFooterSoundBtnBg();
   }
       });
     }
@@ -275,38 +274,16 @@ class GameScene extends Phaser.Scene {
   const rightMargin = 12;
   this.soundBtnFooter = this.add.text(w - rightMargin, footerCenterY, iconFor(mutedInit), { fontSize: `${fontPx}px`, color: window.GameConfig.COLORS.button })
       .setOrigin(1, 0.5).setInteractive();
-    this.soundBtnFooterBg = this.add.graphics();
-    this._redrawFooterSoundBtnBg = () => {
-      if (!this.soundBtnFooter || !this.soundBtnFooterBg) return;
-      const b = this.soundBtnFooter.getBounds();
-      this.soundBtnFooterBg.clear();
-      this.soundBtnFooterBg.fillStyle(window.GameConfig.COLORS.normal, 1);
-  const padX = 6, padY = 3;
-  const rectW = b.width + padX * 2;
-  const rectH = Math.max(Math.min(footerHeight - 8, b.height + padY * 2), 14);
-  const cx = b.x + b.width / 2;
-  const cy = b.y + b.height / 2;
-  this.soundBtnFooterBg.fillRoundedRect(cx - rectW / 2, cy - rectH / 2, rectW, rectH, 6);
-      this.children.moveBelow(this.soundBtnFooterBg, this.soundBtnFooter);
-    };
-    this._redrawFooterSoundBtnBg();
-    this.soundBtnFooter.on('pointerover', () => {
-      const b = this.soundBtnFooter.getBounds();
-      this.soundBtnFooterBg.clear();
-      this.soundBtnFooterBg.fillStyle(window.GameConfig.COLORS.hover, 1);
-      this.soundBtnFooterBg.fillRoundedRect(b.x - 6, b.y - 4, b.width + 12, b.height + 8, 8);
-    });
-    this.soundBtnFooter.on('pointerout', () => this._redrawFooterSoundBtnBg());
+    this.soundBtnFooter.on('pointerover', () => {});
+    this.soundBtnFooter.on('pointerout', () => {});
     this.soundBtnFooter.on('pointerdown', () => {
       const current = localStorage.getItem('bb_soundMuted') === 'true';
       const next = !current;
       localStorage.setItem('bb_soundMuted', String(next));
       if (this.sound && typeof this.sound.setMute === 'function') this.sound.setMute(next);
       this.soundBtnFooter.setText(iconFor(next));
-      this._redrawFooterSoundBtnBg();
     });
     if (this.soundBtnFooter.setDepth) this.soundBtnFooter.setDepth(4);
-    if (this.soundBtnFooterBg.setDepth) this.soundBtnFooterBg.setDepth(3);
   }
 
   _handleEscDoublePress() {
@@ -566,10 +543,9 @@ class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.physics.resume();
   if (this.pauseScreenElements) { this.pauseScreenElements.destroy(true, true); this.pauseScreenElements = null; }
-  if (this.soundBtnFooterBg) this.soundBtnFooterBg.setVisible(true);
   if (this.soundBtnFooter) this.soundBtnFooter.setVisible(true);
     const muted = localStorage.getItem('bb_soundMuted') === 'true';
-  if (this.soundBtnFooter) { this.soundBtnFooter.setText(muted ? '🔇' : '🔊'); if (this._redrawFooterSoundBtnBg) this._redrawFooterSoundBtnBg(); }
+  if (this.soundBtnFooter) { this.soundBtnFooter.setText(muted ? '🔇' : '🔊'); }
   }
 
   showHelp() {
@@ -587,7 +563,6 @@ class GameScene extends Phaser.Scene {
       this.helpScreenElements = this.add.group([bg, txt]);
     }
   if (this.soundBtnFooter) this.soundBtnFooter.setVisible(false);
-  if (this.soundBtnFooterBg) this.soundBtnFooterBg.setVisible(false);
     this.input.keyboard.once('keydown-H', () => this.hideHelp());
     this.input.keyboard.once('keydown-ESC', () => this.hideHelp());
   }
@@ -603,7 +578,6 @@ class GameScene extends Phaser.Scene {
       }
       this.helpScreenElements = null;
     }
-  if (this.soundBtnFooterBg) this.soundBtnFooterBg.setVisible(true);
   if (this.soundBtnFooter) this.soundBtnFooter.setVisible(true);
   }
 
