@@ -946,6 +946,20 @@ class GameScene extends Phaser.Scene {
         }
       });
     }
+
+    // Remove power-ups that reach the bottom play boundary (above footer)
+    if (this.powerups) {
+      const H = this.sys.game.config.height;
+      const footer = this._footerHeight || 28;
+      const cutoffY = H - footer; // top of footer/status panel
+      this.powerups.getChildren().forEach(p => {
+        if (!p || !p.active) return;
+        const bottomY = p.y + (p.displayHeight ? (p.displayHeight / 2) : 0);
+        if (bottomY >= cutoffY) {
+          try { p.destroy(); } catch(_) {}
+        }
+      });
+    }
   }
 
   _getTrailTintForBall(ball) {
