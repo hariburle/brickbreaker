@@ -60,7 +60,9 @@ class GameScene extends Phaser.Scene {
     this.hudRightText = this.add.text(w - 72, 24, '', { fontSize: window.GameConfig.FONT_SIZES.hud, color: window.GameConfig.COLORS.text }).setOrigin(1, 0.5);
     this.updateHudText();
   this._initParticles();
-    this.hudWall = this.add.rectangle(w / 2, 52, w, 8, 0xffd700, 1).setOrigin(0.5);
+  // Thin visual divider between HUD and playfield
+  this._borderThickness = 4;
+  this.hudWall = this.add.rectangle(w / 2, 52, w, this._borderThickness, 0xffd700, 0.6).setOrigin(0.5);
   // Clear global reference when this scene shuts down/destroys
   this.events.once('shutdown', () => { if (window.currentGameScene === this) window.currentGameScene = null; });
   this.events.once('destroy', () => { if (window.currentGameScene === this) window.currentGameScene = null; });
@@ -72,7 +74,8 @@ class GameScene extends Phaser.Scene {
     const w = this.sys.game.config.width;
     const h = this.sys.game.config.height;
   const footerHeight = this._footerHeight || 28;
-  this.paddle = this.physics.add.sprite(w / 2, h - footerHeight - 50, 'paddle');
+  // Position paddle slightly lower to reduce extra gap above footer
+  this.paddle = this.physics.add.sprite(w / 2, h - footerHeight - 30, 'paddle');
     this.paddle.setImmovable(true);
     this.paddle.body.allowGravity = false;
   // We'll clamp manually to allow exact visual edge contact with walls
@@ -236,7 +239,7 @@ class GameScene extends Phaser.Scene {
         if (this.hudLeftText) this.hudLeftText.setPosition(16, 24);
         if (this.hudCenterText) this.hudCenterText.setPosition(width / 2, 24);
         if (this.hudRightText) this.hudRightText.setPosition(width - 72, 24);
-  if (this.hudWall) this.hudWall.setPosition(width / 2, 52).setSize(width, 8);
+  if (this.hudWall) this.hudWall.setPosition(width / 2, 52).setSize(width, this._borderThickness || 4);
         if (this.paddle) {
           const half = this.paddle.displayWidth / 2;
           const margin = Math.ceil((this._borderThickness || 3) / 2);
@@ -502,7 +505,7 @@ class GameScene extends Phaser.Scene {
         const cell = grid[r][c]; if (!cell) continue;
         const x = offsetX + c * (scaledW + padX);
         const y = offsetY + r * (scaledH + padY);
-        const isPower = cell === 2 || cell === 3;
+  const isPower = (cell === 2 || cell === 3 || cell === 4 || cell === 5);
         const group = isPower ? this.powerupBricks : this.bricks;
         const tex = texMap[cell] || 'brick_green';
         const brick = group.create(x, y, tex).setOrigin(0, 0);
@@ -797,10 +800,36 @@ class GameScene extends Phaser.Scene {
         // Change paddle skin for fireball duration if available
         if (this.textures.exists('paddle_fireball')) paddle.setTexture('paddle_fireball');
         // Change all balls to fireball texture for the duration
-        this.balls.getChildren().forEach(b => { try { b.setTexture('ball_fireball'); } catch(_){} });
+        this.balls.getChildren().forEach(b => {
+          try {
+            b.setTexture('ball_fireball');
+            if (b.body) {
+              const dw = b.displayWidth || b.width; const dh = b.displayHeight || b.height;
+              const rad = Math.floor(Math.min(dw, dh) / 2);
+              if (typeof b.body.setCircle === 'function') {
+                b.body.setCircle(rad);
+                b.body.setOffset((dw / 2) - rad, (dh / 2) - rad);
+              } else { b.body.setSize(dw, dh); }
+            }
+          } catch(_){}
+        });
         this._startOrResetStatusTimer('fire', 'Fireball', '#ffa200', window.GameConfig.POWERUP_DURATION, () => {
           this.activePowerups.fire = false;
           this._setFireballActive(false);
+          // Restore textures and physics bodies
+          this.balls.getChildren().forEach(b => {
+            try {
+              b.setTexture(b._baseKey || 'ball_blue');
+              if (b.body) {
+                const dw = b.displayWidth || b.width; const dh = b.displayHeight || b.height;
+                const rad = Math.floor(Math.min(dw, dh) / 2);
+                if (typeof b.body.setCircle === 'function') {
+                  b.body.setCircle(rad);
+                  b.body.setOffset((dw / 2) - rad, (dh / 2) - rad);
+                } else { b.body.setSize(dw, dh); }
+              }
+            } catch(_){}
+          });
           // Restore paddle skin depending on whether big paddle remains
           if (this.activePowerups.big) {
             if (this.textures.exists('paddle_wide')) paddle.setTexture('paddle_wide');
@@ -844,6 +873,25 @@ class GameScene extends Phaser.Scene {
     // Visual cue: tint balls while fireball is active
     this.balls.getChildren().forEach(b => {
       try { this.isFireball ? b.setTint(0xffa200) : b.clearTint(); } catch(_) {}
+      // Sync physics body to current displayed sprite to avoid overlap illusions
+      if (b && b.body) {
+        const dw = b.displayWidth || b.width;
+        const dh = b.displayHeight || b.height;
+        // Use circular body when square-ish, else box
+        const rad = Math.floor(Math.min(dw, dh) / 2);
+        try {
+          if (typeof b.body.setCircle === 'function') {
+            b.body.setCircle(rad);
+            // Center circle within sprite bounds
+            const ox = (dw / 2) - rad;
+            const oy = (dh / 2) - rad;
+            b.body.setOffset(ox, oy);
+          } else {
+            b.body.setSize(dw, dh);
+            b.body.setOffset((b.width - dw) / 2 || 0, (b.height - dh) / 2 || 0);
+          }
+        } catch(_) {}
+      }
     });
   }
 

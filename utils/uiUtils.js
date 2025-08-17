@@ -32,108 +32,211 @@ function createRoundedButton(scene, x, y, text, style, onClick) {
  * @returns {Phaser.GameObjects.Group} group of panel elements
  */
 function createHelpPanel(scene, options = {}) {
-    const w = scene.sys.game.config.width; const h = scene.sys.game.config.height;
-    const panelW = Math.min(680, w * 0.9);
-    const panelH = Math.min(520, h * 0.85);
-    const panelX = (w - panelW) / 2;
-    const panelY = (h - panelH) / 2;
+        const w = scene.sys.game.config.width; const h = scene.sys.game.config.height;
+        const panelW = Math.min(680, w * 0.9);
+        const panelH = Math.min(520, h * 0.85);
+        const panelX = (w - panelW) / 2;
+        const panelY = (h - panelH) / 2;
 
-    const g = scene.add.graphics();
-    g.fillStyle(window.GameConfig.COLORS.helpBox, 1);
-    g.fillRoundedRect(panelX, panelY, panelW, panelH, 16);
-    g.lineStyle(2, 0x00ffff, 1);
-    g.strokeRoundedRect(panelX, panelY, panelW, panelH, 16);
-    g.setDepth(1000);
+        // Root container
+        const root = scene.add.container(0, 0);
+        root.setDepth(1000);
 
-    const title = scene.add.text(w/2, panelY + 32, 'Help', {
-        fontSize: '44px',
-        color: window.GameConfig.COLORS.text
-    }).setOrigin(0.5).setDepth(1000);
+        // Panel background
+        const g = scene.add.graphics();
+        g.fillStyle(window.GameConfig.COLORS.helpBox, 1);
+        g.fillRoundedRect(panelX, panelY, panelW, panelH, 16);
+        g.lineStyle(2, 0x00ffff, 1);
+        g.strokeRoundedRect(panelX, panelY, panelW, panelH, 16);
+        g.setDepth(1000);
+        root.add(g);
 
-    const left = panelX + 24; const right = panelX + panelW - 24;
-    let y = panelY + 80;
-    const makeLine = (t, fs) => scene.add.text(left, y, t, {
-        fontFamily: 'monospace',
-        fontSize: fs || '16px',
-        color: window.GameConfig.COLORS.text,
-        wordWrap: { width: panelW - 48, useAdvancedWrap: true }
-    }).setOrigin(0, 0).setDepth(1000);
+        // Title
+        const title = scene.add.text(w/2, panelY + 32, 'Help', {
+                fontSize: '44px',
+                color: window.GameConfig.COLORS.text
+        }).setOrigin(0.5).setDepth(1000);
+        root.add(title);
 
-    const elements = [g, title];
+        // Scrollable content region (mask)
+        const contentMarginTop = 64; // space for title
+        const contentMarginBottom = 56; // space for back button
+        const viewportX = panelX + 16;
+        const viewportY = panelY + contentMarginTop;
+        const viewportW = panelW - 32;
+        const viewportH = panelH - (contentMarginTop + contentMarginBottom);
 
-    elements.push(makeLine('Controls:')); y += 24;
-    elements.push(makeLine('• Move Paddle: Mouse or Arrow Keys')); y += 22;
-    elements.push(makeLine('• Change Ball Speed: + / -')); y += 22;
-    elements.push(makeLine('• Toggle Sound: Press S or click the HUD sound icon (🔊/🔇)')); y += 22;
-    elements.push(makeLine('• Pause (in game): ESC')); y += 28;
+        const content = scene.add.container(0, 0);
+        content.setDepth(1000);
+        root.add(content);
 
-    elements.push(makeLine('Scoring:')); y += 24;
-    const pts = window.GameConfig.BRICK_POINTS || { 1: 10, 2: 25, crack: 5 };
-    const iconRow = (texKey, text) => {
-        const imgH = 24; let dx = left; let iconObj = null; let scale = 1;
-        const tex = scene.textures.get(texKey);
-        if (tex && tex.source[0]) {
-            const srcH = tex.getSourceImage().height;
-            scale = imgH / srcH;
-            iconObj = scene.add.image(left, y + imgH/2, texKey).setOrigin(0, 0.5).setScale(scale).setDepth(1000);
-            elements.push(iconObj);
-            dx = left + iconObj.displayWidth + 10;
-        }
-        const wrapWidth = panelX + panelW - 24 - dx;
-        const label = scene.add.text(dx, y, text, {
-            fontFamily: 'monospace',
-            fontSize: '16px',
-            color: window.GameConfig.COLORS.text,
-            wordWrap: { width: wrapWidth, useAdvancedWrap: true }
-        }).setOrigin(0, 0).setDepth(1000);
-        elements.push(label);
-        y += imgH + 6;
-    };
-    iconRow('brick_green', `Normal Brick = +${pts[1]} pts`);
-    iconRow('brick_blue', `Power-up Brick (2 hits): crack +${pts.crack}, destroy +${pts[2]} and drops a power-up`);
-    iconRow('brick_yellow', `Power-up Brick (2 hits): crack +${pts.crack}, destroy +${pts[2]} and drops a power-up`);
-    y += 8;
+        const maskG = scene.add.graphics();
+        maskG.fillStyle(0xffffff, 1);
+        maskG.fillRect(viewportX, viewportY, viewportW, viewportH);
+        const mask = maskG.createGeometryMask();
+        content.setMask(mask);
+        maskG.visible = false;
 
-    elements.push(makeLine('Power-ups:')); y += 24;
-    const powerRow = (texKey, label) => {
-        const imgH = 24; let dx = left; let iconObj = null; let scale = 1;
-        const tex = scene.textures.get(texKey);
-        if (tex && tex.source[0]) {
-            const srcH = tex.getSourceImage().height;
-            scale = imgH / srcH;
-            iconObj = scene.add.image(left, y + imgH/2, texKey).setOrigin(0, 0.5).setScale(scale).setDepth(1000);
-            elements.push(iconObj);
-            dx = left + iconObj.displayWidth + 10;
-        }
-        const wrapWidth = panelX + panelW - 24 - dx;
-        const labelObj = scene.add.text(dx, y, label, {
-            fontFamily: 'monospace',
-            fontSize: '16px',
-            color: window.GameConfig.COLORS.text,
-            wordWrap: { width: wrapWidth, useAdvancedWrap: true }
-        }).setOrigin(0, 0).setDepth(1000);
-        elements.push(labelObj);
-        y += imgH + 6;
-    };
-    powerRow('powerup_wide', 'Big Paddle: Temporarily widens the paddle (timed)');
-    powerRow('powerup_multiball', 'Multi-ball: Spawns extra balls with varied angles/speeds');
+        // Helpers for building lines inside content
+        const left = panelX + 24;
+        let y = panelY + 80;
+        const makeLine = (t, fs) => {
+                const text = scene.add.text(left, y, t, {
+                        fontFamily: 'monospace',
+                        fontSize: fs || '16px',
+                        color: window.GameConfig.COLORS.text,
+                        wordWrap: { width: panelW - 48, useAdvancedWrap: true }
+                }).setOrigin(0, 0).setDepth(1000);
+                content.add(text);
+                return text;
+        };
 
-    y += 8; elements.push(makeLine('Tip: Hit the ball off-center and move the paddle during impact to add spin and vary angles.'));
+        // Build content
+        makeLine('Controls:'); y += 24;
+        makeLine('• Move Paddle: Mouse or Arrow Keys'); y += 22;
+        makeLine('• Change Ball Speed: + / -'); y += 22;
+        makeLine('• Toggle Sound: Press S or tap the status panel sound icon (🔊/🔇)'); y += 22;
+        makeLine('• Pause (in game): ESC'); y += 28;
 
-    const backBtnGroup = createRoundedButton(scene, w/2, panelY + panelH - 28, 'Back', {
-        fontSize: '22px',
-        color: window.GameConfig.COLORS.button,
-        padding: { x: 20, y: 10 }
-    }, () => {
-        if (options.onBack) options.onBack();
-    });
-    // Push both background and text from Back button
-    backBtnGroup.getChildren().forEach(c => { c.setDepth(1000); elements.push(c); });
+        makeLine('Scoring:'); y += 24;
+        const pts = window.GameConfig.BRICK_POINTS || { 1: 10, 2: 25, crack: 5 };
+        const iconRow = (texKey, text) => {
+                const imgH = 24; let dx = left; let iconObj = null; let scale = 1;
+                const tex = scene.textures.get(texKey);
+                if (tex && tex.source[0]) {
+                        const srcH = tex.getSourceImage().height;
+                        scale = imgH / srcH;
+                        iconObj = scene.add.image(left, y + imgH/2, texKey).setOrigin(0, 0.5).setScale(scale).setDepth(1000);
+                        content.add(iconObj);
+                        dx = left + iconObj.displayWidth + 10;
+                }
+                const wrapWidth = panelX + panelW - 24 - dx;
+                const label = scene.add.text(dx, y, text, {
+                        fontFamily: 'monospace',
+                        fontSize: '16px',
+                        color: window.GameConfig.COLORS.text,
+                        wordWrap: { width: wrapWidth, useAdvancedWrap: true }
+                }).setOrigin(0, 0).setDepth(1000);
+                content.add(label);
+                y += imgH + 6;
+        };
+        iconRow('brick_green', `Normal Brick = +${pts[1]} pts`);
+        iconRow('brick_blue', `Big Paddle power-up Brick (2 hits): crack +${pts.crack}, destroy +${pts[2]}`);
+        iconRow('brick_yellow', `Multiball power-up Brick (2 hits): crack +${pts.crack}, destroy +${pts[2]}`);
+        iconRow('brick_purple', `Life power-up brick (2 hits): crack +${pts.crack}, destroy +${pts[2]}`);
+        iconRow('brick_red', `Fire power-up brick (2 hits): crack +${pts.crack}, destroy +${pts[2]}`);
+        y += 8;
 
-    // Wrap in a container for easier layering and cleanup
-    const container = scene.add.container(0, 0, elements);
-    container.setDepth(1000);
-    return container;
+        makeLine('Power-ups:'); y += 24;
+        const powerRow = (texKey, label) => {
+                const imgH = 24; let dx = left; let iconObj = null; let scale = 1;
+                const tex = scene.textures.get(texKey);
+                if (tex && tex.source[0]) {
+                        const srcH = tex.getSourceImage().height;
+                        scale = imgH / srcH;
+                        iconObj = scene.add.image(left, y + imgH/2, texKey).setOrigin(0, 0.5).setScale(scale).setDepth(1000);
+                        content.add(iconObj);
+                        dx = left + iconObj.displayWidth + 10;
+                }
+                const wrapWidth = panelX + panelW - 24 - dx;
+                const labelObj = scene.add.text(dx, y, label, {
+                        fontFamily: 'monospace',
+                        fontSize: '16px',
+                        color: window.GameConfig.COLORS.text,
+                        wordWrap: { width: wrapWidth, useAdvancedWrap: true }
+                }).setOrigin(0, 0).setDepth(1000);
+                content.add(labelObj);
+                y += imgH + 6;
+        };
+        powerRow('powerup_wide', 'Big Paddle: Temporarily widens the paddle');
+        powerRow('powerup_multiball', 'Multi-ball: Spawns extra balls');
+        powerRow('powerup_life', 'Extra Life');
+        powerRow('powerup_fireball', 'Fireball blows through bricks.');
+
+        y += 8; makeLine('Tip: Hit the ball off-center and move the paddle during impact to add spin and vary angles.');
+
+        // Back button (fixed at bottom)
+        const backBtnGroup = createRoundedButton(scene, w/2, panelY + panelH - 28, 'Back', {
+                fontSize: '22px',
+                color: window.GameConfig.COLORS.button,
+                padding: { x: 20, y: 10 }
+        }, () => { if (options.onBack) options.onBack(); });
+        backBtnGroup.getChildren().forEach(c => { c.setDepth(1000); root.add(c); });
+
+        // Scroll mechanics
+        const contentBottom = y; // current world Y of last line
+        const maxScroll = Math.max(0, (contentBottom) - (viewportY + viewportH));
+        let scrollY = 0;
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+        // Scrollbar visuals
+        const sbTrack = scene.add.graphics().setDepth(1000);
+        const sbThumb = scene.add.graphics().setDepth(1001);
+        const sbX = viewportX + viewportW - 6; // right edge inside viewport
+        const sbY = viewportY;
+        const sbW = 4;
+        const sbH = viewportH;
+        const drawScrollbar = () => {
+            sbTrack.clear(); sbThumb.clear();
+            if (maxScroll <= 0) return; // no need
+            // track
+            sbTrack.fillStyle(0xffffff, 0.15);
+            sbTrack.fillRoundedRect(sbX, sbY, sbW, sbH, 2);
+            // thumb size proportional to viewport/total
+            const totalContentHeight = (contentBottom - (panelY + 80));
+            const ratio = clamp(viewportH / Math.max(viewportH, totalContentHeight), 0.15, 1);
+            const thumbH = Math.max(20, sbH * ratio);
+            const tMax = sbH - thumbH;
+            const tPos = (maxScroll === 0) ? 0 : (-scrollY / maxScroll) * tMax;
+            sbThumb.fillStyle(0x00ffff, 0.7);
+            sbThumb.fillRoundedRect(sbX, sbY + tPos, sbW, thumbH, 2);
+        };
+
+        const applyScroll = (delta) => {
+            if (maxScroll <= 0) return;
+            scrollY = clamp(scrollY + delta, -maxScroll, 0);
+            content.y = scrollY;
+            drawScrollbar();
+        };
+
+        // Mouse wheel within panel only
+        const onWheel = (pointer, gameObjects, dx, dy) => {
+            const x = pointer.x, yPos = pointer.y;
+            if (x < panelX || x > panelX + panelW || yPos < panelY || yPos > panelY + panelH) return;
+            applyScroll(-dy * 0.5);
+        };
+        scene.input.on('wheel', onWheel);
+
+        // Drag scroll (touch/mouse)
+        let dragStartY = null; let lastY = null;
+        const withinViewport = (px, py) => (px >= viewportX && px <= viewportX + viewportW && py >= viewportY && py <= viewportY + viewportH);
+        const onDown = (pointer) => {
+            if (!withinViewport(pointer.x, pointer.y)) return;
+            dragStartY = pointer.y; lastY = pointer.y;
+        };
+        const onMove = (pointer) => {
+            if (dragStartY == null || lastY == null || !pointer.isDown) return;
+            const dy = pointer.y - lastY; lastY = pointer.y;
+            applyScroll(dy);
+        };
+        const onUp = () => { dragStartY = null; lastY = null; };
+        scene.input.on('pointerdown', onDown);
+        scene.input.on('pointermove', onMove);
+        scene.input.on('pointerup', onUp);
+
+        drawScrollbar();
+
+        // Cleanup when destroyed
+        const detach = () => {
+            try { scene.input.off('wheel', onWheel); } catch(_){}
+            try { scene.input.off('pointerdown', onDown); scene.input.off('pointermove', onMove); scene.input.off('pointerup', onUp); } catch(_){}
+            try { maskG.destroy(); } catch(_){}
+            try { sbTrack.destroy(); sbThumb.destroy(); } catch(_){}
+        };
+        root.once('destroy', detach);
+        scene.events.once('shutdown', detach);
+
+        return root;
 }
 
 // expose helpers globally

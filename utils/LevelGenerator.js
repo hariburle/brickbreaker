@@ -103,6 +103,27 @@
     }
   }
 
+  // Reduce overall density for the first level to keep it beginner-friendly
+  function thinGridForLevel1(grid, rng, targetFill = 0.38) {
+    const rows = grid.length, cols = grid[0].length;
+    let filled = 0;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === 1) filled++;
+    const total = rows * cols;
+    const desired = Math.floor(total * targetFill);
+    if (filled <= desired) return;
+    // Collect coordinates of filled cells and randomly clear until target met
+    const cells = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === 1) cells.push([r, c]);
+    for (let i = cells.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = cells[i]; cells[i] = cells[j]; cells[j] = t; }
+    let idx = 0;
+    while (filled > desired && idx < cells.length) {
+      const [r, c] = cells[idx++];
+      // Avoid clearing center columns too aggressively; favor edges first
+      const bias = Math.abs(c - Math.floor(cols / 2));
+      if (rng() < (0.3 + bias / Math.max(1, cols))) { grid[r][c] = 0; filled--; }
+    }
+  }
+
   function distributePowerups(grid, levelNumber, rng) {
     const rows = grid.length, cols = grid[0].length;
     // Power-up count scales up gently with level, ensure at least 1
@@ -111,19 +132,50 @@
     const bonus = Math.floor((levelNumber - 1) / 3); // +1 every 3 levels
     const maxP = clamp(2 + Math.floor((levelNumber - 1) / 5), 2, 6);
     let target = clamp(base + bonus, minP, maxP);
+    if (levelNumber <= 1) target = clamp(target, 2, 2); // ensure 2 on Level 1 (Life + one other)
+
+    // Collect eligible brick cells (value 1)
     const cells = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === 1) cells.push([r, c]);
-    // shuffle
+    // shuffle cells
     for (let i = cells.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = cells[i]; cells[i] = cells[j]; cells[j] = t; }
-    for (let i = 0; i < cells.length && target > 0; i++) {
-      const [r, c] = cells[i];
-      // Avoid placing too many at the very top row for variety
-      if (r === 0 && rng() < 0.5) continue;
-      // Distribute among: 2 big_paddle, 3 multi_ball, 4 life, 5 fireball
+
+    // Helper to take a cell, preferring non-top rows when possible
+    const takeCell = () => {
+      // try non-top first
+      for (let i = 0; i < cells.length; i++) {
+        if (cells[i][0] > 0) { return cells.splice(i, 1)[0]; }
+      }
+      return cells.length ? cells.shift() : null;
+    };
+
+    // Guarantee a mix of power-ups
+    const required = [];
+    if (levelNumber === 1) {
+      required.push(4); // life
+      required.push(rng() < 0.5 ? 2 : 3); // big_paddle or multi_ball
+    } else if (levelNumber === 2) {
+      required.push(4); // life
+      required.push(5); // fireball
+    }
+
+    target = Math.min(Math.max(target, required.length), Math.max(required.length, cells.length));
+
+    // Place required types first
+    for (let k = 0; k < required.length && target > 0; k++) {
+      const picked = takeCell(); if (!picked) break;
+      const [r, c] = picked; grid[r][c] = required[k]; target--;
+    }
+
+    // Fill remaining with biased random per level band
+    while (target > 0 && cells.length > 0) {
+      const picked = takeCell(); if (!picked) break;
+      const [r, c] = picked;
       const roll = rng();
-      // Early levels bias towards big paddle and multiball/life; higher levels introduce more fire
-      if (levelNumber <= 2) {
-        grid[r][c] = roll < 0.5 ? 2 : roll < 0.85 ? 3 : 4; // no fire in L1-2
+      if (levelNumber === 1) {
+        grid[r][c] = roll < 0.45 ? 2 : roll < 0.8 ? 3 : 4; // no fire on L1
+      } else if (levelNumber === 2) {
+        grid[r][c] = roll < 0.4 ? 2 : roll < 0.7 ? 3 : roll < 0.85 ? 4 : 5; // introduce some fire
       } else if (levelNumber <= 5) {
         grid[r][c] = roll < 0.4 ? 2 : roll < 0.75 ? 3 : roll < 0.9 ? 4 : 5;
       } else {
@@ -148,7 +200,12 @@
   const grid = makeEmpty(effectiveRows, effectiveCols, 0);
     const pattern = pickPattern(levelNumber, rng);
     fillPattern(grid, pattern, rng);
-    applyDifficulty(grid, levelNumber, rng);
+    if (levelNumber <= 1) {
+      // Thin bricks for an easy start; skip extra density
+      thinGridForLevel1(grid, rng, 0.34);
+    } else {
+      applyDifficulty(grid, levelNumber, rng);
+    }
     distributePowerups(grid, levelNumber, rng);
 
     // Reserve side corridors at level 1 (leave first/last column empty)
