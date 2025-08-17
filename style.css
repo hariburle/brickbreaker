@@ -1,0 +1,25 @@
+html, body {
+  height: 100%;
+  overflow: hidden; /* Prevent scrollbars caused by shadows or scaling */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: #181a20;
+  color: #fff;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  touch-action: none; /* Delegate touch entirely to Phaser */
+}
+#game-container {
+  /* Use dynamic viewport height to avoid mobile URL bar issues */
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  margin: 0;
+  overflow: hidden; /* Ensure game stays within the viewport */
+  box-shadow: 0 0 32px #0ff8, 0 0 8px #222;
+  background: #222;
+}

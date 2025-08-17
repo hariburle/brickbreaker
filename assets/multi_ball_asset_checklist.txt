@@ -1,0 +1,17 @@
+# Multi-Ball Power-Up Asset Checklist
+
+## Ball Assets (different colors)
+- assets/ball_red.png
+- assets/ball_blue.png
+- assets/ball_green.png
+- assets/ball_yellow.png
+- (Optional) assets/ball_purple.png
+- (Optional) assets/ball_orange.png
+
+## Power-Up Drop Asset (for multi-ball)
+- assets/powerup-multiball.png
+
+---
+Place all files in the `assets/` folder. Make sure each image matches the style and size of your existing ball and power-up assets.
+
+You can update this checklist as you create each asset.
